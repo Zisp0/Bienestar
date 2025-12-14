@@ -1,0 +1,16 @@
+<div class="app-shell">
+  <div class="topbar">
+    <div class="brand">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#6c63ff"/></svg>
+      <h1>Bienestar</h1>
+      <div class="muted small">Seguimiento personal</div>
+    </div>
+    <nav class="nav">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Dashboard</a>
+      <a routerLink="/calendar" routerLinkActive="active">Calendario</a>
+      <a routerLink="/stats" routerLinkActive="active">Estadísticas</a>
+    </nav>
+  </div>
+
+  <router-outlet></router-outlet>
+</div>

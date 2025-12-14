@@ -1,0 +1,32 @@
+{
+  "$schema": "https://angular.io/config/schema.json",
+  "version": 1,
+  "projects": {
+    "bienestar": {
+      "projectType": "application",
+      "root": "src",
+      "sourceRoot": "src",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "outputPath": "dist/bienestar",
+            "index": "src/index.html",
+            "main": "src/main.ts",
+            "polyfills": "src/polyfills.ts",
+            "tsConfig": "tsconfig.app.json",
+            "assets": ["src/favicon.ico"],
+            "styles": ["src/styles.css"]
+          }
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "browserTarget": "bienestar:build"
+          }
+        }
+      }
+    }
+  },
+  "defaultProject": "bienestar"
+}

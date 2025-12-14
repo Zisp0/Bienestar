@@ -1,0 +1,26 @@
+<div class="grid">
+  <div class="card">
+    <h3>Últimos registros</h3>
+    <div *ngIf="entries.length === 0" class="muted">No hay registros aún. Agrega uno desde el calendario.</div>
+    <div *ngFor="let e of entries | slice:0:8" class="metric-row">
+      <div>
+        <div class="metric-label">{{ e.date }}</div>
+        <div class="muted small">{{ e.comment || '—' }}</div>
+      </div>
+      <div class="small muted">Dolor: {{ e.pain.category }} · Ánimo: {{ e.mood.category }}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Atajos</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn" routerLink="/calendar">Abrir calendario</a>
+      <a class="btn" routerLink="/stats">Ver estadísticas</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Consejo</h3>
+    <p class="muted small">Registra diariamente para obtener mejores tendencias. Usa categorías y un comentario breve.</p>
+  </div>
+</div>

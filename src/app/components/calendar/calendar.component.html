@@ -1,0 +1,14 @@
+<div class="grid">
+  <div class="card">
+    <h3>Selecciona una fecha</h3>
+    <input type="date" (change)="onSelectInput($event)" />
+    <p class="muted small">También puedes hacer click en días marcados abajo.</p>
+  </div>
+
+  <div class="card">
+    <h3>Fechas con registro</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <button *ngFor="let d of (markedKeys | slice:0:60)" (click)="openDate(d)" class="btn small">{{d}}</button>
+    </div>
+  </div>
+</div>
