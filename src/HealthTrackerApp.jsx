@@ -381,7 +381,17 @@ const HealthTrackerApp = () => {
       energía: entry.energiaFisica ? categoryToValue('energiaFisica', entry.energiaFisica) : null,
       claridad: entry.claridadMental ? categoryToValue('claridadMental', entry.claridadMental) : null,
       motivación: entry.motivacion ? categoryToValue('motivacion', entry.motivacion) : null,
-      estrés: entry.estres ? categoryToValue('estres', entry.estres) : null
+      estrés: entry.estres ? categoryToValue('estres', entry.estres) : null,
+
+
+      dolorLabel: entry.dolor,
+      libidoLabel: entry.libido,
+      sueñoLabel: entry.sueno,
+      ánimoLabel: entry.estadoAnimo,
+      energíaLabel: entry.energiaFisica,
+      claridadLabel: entry.claridadMental,
+      motivaciónLabel: entry.motivacion,
+      estrésLabel: entry.estres
     }));
   };
 
@@ -392,6 +402,28 @@ const HealthTrackerApp = () => {
     setOpenAccordion(openAccordion === section ? null : section);
   };
   
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-4 rounded-lg shadow-xl border-2 border-purple-200">
+          <p className="font-bold text-gray-800 mb-2">{label}</p>
+          {payload.map((entry, index) => {
+            const categoryKey = entry.dataKey;
+            const labelKey = `${categoryKey}Label`;
+            const labelValue = entry.payload[labelKey];
+            
+            return (
+              <p key={index} className="text-sm" style={{ color: entry.color }}>
+                <span className="font-semibold">{entry.name}:</span> {labelValue || entry.value}
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+    return null;
+  };
+
   const toggleGraphCategory = (category) => {
     setSelectedGraphCategories(prev => ({
       ...prev,
@@ -1223,7 +1255,7 @@ const HealthTrackerApp = () => {
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="date" />
                               <YAxis domain={[0, 6]} ticks={[1, 2, 3, 4, 5]} />
-                              <Tooltip />
+                              <Tooltip content={<CustomTooltip />} />
                               <Legend />
                               {selectedGraphCategories.dolor && (
                                 <Line type="monotone" dataKey="dolor" stroke="#ef4444" strokeWidth={2} name="Dolor" />
