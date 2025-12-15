@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, TrendingUp, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Edit2, Trash2, ArrowUp, ArrowDown, Settings, X } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const styles = `
   @keyframes slide-in {
@@ -46,8 +46,6 @@ const HealthTrackerApp = () => {
     }
   }, []);
 
-
-
   useEffect(() => {
     localStorage.setItem('customCategories', JSON.stringify(customCategories));
   }, [customCategories]);
@@ -58,6 +56,16 @@ const HealthTrackerApp = () => {
     sueno: '',
     estadoAnimo: '',
     emocion: '',
+    energiaFisica: '',
+    claridadMental: '',
+    motivacion: '',
+    estres: '',
+    sensacionCorporal: '',
+    actividadFisica: '',
+    despertaresNocturnos: false,
+    suenosVividos: false,
+    periodo: false,
+    sintomasFisicos: [],
     comentarios: ''
   });
 
@@ -68,8 +76,23 @@ const HealthTrackerApp = () => {
     estadoAnimo: ['Muy triste', 'Triste', 'Neutral', 'Feliz', 'Muy feliz'],
     emocion: customCategories.filter(c => !c.archived).length > 0 
       ? customCategories.filter(c => !c.archived).map(c => c.name) 
-      : []
+      : [],
+    energiaFisica: ['Muy baja', 'Baja', 'Moderada', 'Alta', 'Muy alta'],
+    claridadMental: ['Muy baja', 'Baja', 'Moderada', 'Alta', 'Muy alta'],
+    motivacion: ['Muy baja', 'Baja', 'Moderada', 'Alta', 'Muy alta'],
+    estres: ['Muy bajo', 'Bajo', 'Moderado', 'Alto', 'Muy alto'],
+    sensacionCorporal: ['Desconectada', 'Presente'],
+    actividadFisica: ['Nada', 'Suave', 'Intensa']
   };
+
+  const sintomasFisicosOptions = [
+    'Dolor en vientre',
+    'Dolor lumbar',
+    'Sensibilidad mamaria',
+    'Acné',
+    'Hinchazón',
+    'Dolor de cabeza'
+  ];
 
   const categoryColors = {
     dolor: ['bg-green-500', 'bg-yellow-400', 'bg-orange-400', 'bg-red-500', 'bg-red-700'],
@@ -78,7 +101,27 @@ const HealthTrackerApp = () => {
     estadoAnimo: ['bg-indigo-800', 'bg-indigo-500', 'bg-gray-400', 'bg-amber-400', 'bg-yellow-400'],
     emocion: customCategories.filter(c => !c.archived).length > 0 
       ? customCategories.filter(c => !c.archived).map(c => c.color) 
-      : ['bg-purple-600', 'bg-teal-500', 'bg-orange-500', 'bg-yellow-500', 'bg-red-600']
+      : ['bg-purple-600', 'bg-teal-500', 'bg-orange-500', 'bg-yellow-500', 'bg-red-600'],
+    energiaFisica: ['bg-red-500', 'bg-orange-400', 'bg-yellow-500', 'bg-lime-500', 'bg-green-500'],
+    claridadMental: ['bg-slate-600', 'bg-slate-500', 'bg-blue-400', 'bg-cyan-400', 'bg-sky-500'],
+    motivacion: ['bg-gray-500', 'bg-orange-400', 'bg-amber-500', 'bg-yellow-400', 'bg-lime-500'],
+    estres: ['bg-green-500', 'bg-lime-400', 'bg-yellow-500', 'bg-orange-500', 'bg-red-600'],
+    sensacionCorporal: ['bg-gray-400', 'bg-green-500'],
+    actividadFisica: ['bg-gray-400', 'bg-blue-400', 'bg-purple-600']
+  };
+
+  const categoryLabels = {
+    dolor: 'Dolor',
+    libido: 'Libido',
+    sueno: 'Sueño',
+    estadoAnimo: 'Estado de Ánimo',
+    emocion: 'Emoción',
+    energiaFisica: 'Energía Física',
+    claridadMental: 'Claridad Mental',
+    motivacion: 'Motivación',
+    estres: 'Estrés del Día',
+    sensacionCorporal: 'Sensación Corporal',
+    actividadFisica: 'Actividad Física'
   };
 
   const addOrUpdateCustomCategory = (category) => {
@@ -120,44 +163,48 @@ const HealthTrackerApp = () => {
   };
 
   const handleSubmit = () => {
-    if (!formData.dolor || !formData.libido || !formData.sueno || !formData.estadoAnimo || !formData.emocion) {
-      alert('⚠️ Por favor completa todas las categorías antes de guardar');
+    const requiredFields = ['dolor', 'libido', 'sueno', 'estadoAnimo', 'emocion', 
+      'energiaFisica', 'claridadMental', 'motivacion', 'estres', 'sensacionCorporal', 'actividadFisica'];
+    
+    const missingFields = requiredFields.filter(field => !formData[field]);
+    
+    if (missingFields.length > 0) {
+      alert('⚠️ Por favor completa todas las categorías obligatorias antes de guardar');
       return;
     }
     
     try {
       const newEntries = { ...entries };
       newEntries[selectedDate] = { 
-        dolor: formData.dolor,
-        libido: formData.libido,
-        sueno: formData.sueno,
-        estadoAnimo: formData.estadoAnimo,
-        emocion: formData.emocion,
-        comentarios: formData.comentarios,
+        ...formData,
         timestamp: new Date().toISOString() 
       };
       
-      // Actualizar estado
       setEntries(newEntries);
-      
-      // Guardar en localStorage
       localStorage.setItem('healthEntries', JSON.stringify(newEntries));
       
-      // Mostrar toast de éxito
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
       
-      // Limpiar formulario
       setFormData({
         dolor: '',
         libido: '',
         sueno: '',
         estadoAnimo: '',
         emocion: '',
+        energiaFisica: '',
+        claridadMental: '',
+        motivacion: '',
+        estres: '',
+        sensacionCorporal: '',
+        actividadFisica: '',
+        despertaresNocturnos: false,
+        suenosVividos: false,
+        periodo: false,
+        sintomasFisicos: [],
         comentarios: ''
       });
       
-      // Actualizar a la fecha actual para nuevo registro
       setSelectedDate(new Date().toISOString().split('T')[0]);
       
     } catch (error) {
@@ -170,10 +217,27 @@ const HealthTrackerApp = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const toggleCheckbox = (field) => {
+    setFormData(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const toggleSintoma = (sintoma) => {
+    setFormData(prev => {
+      const current = prev.sintomasFisicos || [];
+      const updated = current.includes(sintoma)
+        ? current.filter(s => s !== sintoma)
+        : [...current, sintoma];
+      return { ...prev, sintomasFisicos: updated };
+    });
+  };
+
   useEffect(() => {
     const entry = entries[selectedDate];
     if (entry) {
-      setFormData(entry);
+      setFormData({
+        ...entry,
+        sintomasFisicos: entry.sintomasFisicos || []
+      });
     } else {
       setFormData({
         dolor: '',
@@ -181,6 +245,16 @@ const HealthTrackerApp = () => {
         sueno: '',
         estadoAnimo: '',
         emocion: '',
+        energiaFisica: '',
+        claridadMental: '',
+        motivacion: '',
+        estres: '',
+        sensacionCorporal: '',
+        actividadFisica: '',
+        despertaresNocturnos: false,
+        suenosVividos: false,
+        periodo: false,
+        sintomasFisicos: [],
         comentarios: ''
       });
     }
@@ -214,8 +288,8 @@ const HealthTrackerApp = () => {
       const customCat = activeCategories[index];
       return customCat ? '' : categoryColors[category][index] || 'bg-gray-300';
     }
-    const index = categories[category].indexOf(value);
-    return categoryColors[category][index] || 'bg-gray-300';
+    const index = categories[category]?.indexOf(value);
+    return categoryColors[category]?.[index] || 'bg-gray-300';
   };
 
   const getColorStyle = (category, value) => {
@@ -229,7 +303,6 @@ const HealthTrackerApp = () => {
   };
 
   const getStats = () => {
-    // Filtrar entradas por rango de fechas
     const filteredEntries = Object.entries(entries).filter(([date]) => {
       return date >= dateRange.start && date <= dateRange.end;
     }).map(([, entry]) => entry);
@@ -240,32 +313,53 @@ const HealthTrackerApp = () => {
       dolor: {},
       libido: {},
       sueno: {},
-      estadoAnimo: {}
+      estadoAnimo: {},
+      emocion: {},
+      energiaFisica: {},
+      claridadMental: {},
+      motivacion: {},
+      estres: {},
+      sensacionCorporal: {},
+      actividadFisica: {},
+      despertaresNocturnos: { true: 0, false: 0 },
+      suenosVividos: { true: 0, false: 0 },
+      periodo: { true: 0, false: 0 },
+      sintomasFisicos: {}
     };
 
     filteredEntries.forEach(entry => {
-      Object.keys(stats).forEach(key => {
+      Object.keys(categories).forEach(key => {
         if (entry[key]) {
           stats[key][entry[key]] = (stats[key][entry[key]] || 0) + 1;
         }
       });
+
+      // Checkboxes
+      stats.despertaresNocturnos[entry.despertaresNocturnos ? 'true' : 'false']++;
+      stats.suenosVividos[entry.suenosVividos ? 'true' : 'false']++;
+      stats.periodo[entry.periodo ? 'true' : 'false']++;
+
+      // Síntomas físicos
+      if (entry.sintomasFisicos && Array.isArray(entry.sintomasFisicos)) {
+        entry.sintomasFisicos.forEach(sintoma => {
+          stats.sintomasFisicos[sintoma] = (stats.sintomasFisicos[sintoma] || 0) + 1;
+        });
+      }
     });
 
     return stats;
   };
 
   const getChartData = () => {
-    // Obtener entradas filtradas por fecha y ordenadas
     const filteredEntries = Object.entries(entries)
       .filter(([date]) => date >= dateRange.start && date <= dateRange.end)
       .sort(([a], [b]) => a.localeCompare(b));
     
     if (filteredEntries.length === 0) return null;
 
-    // Convertir categorías a valores numéricos
     const categoryToValue = (category, value) => {
-      const index = categories[category].indexOf(value);
-      return index + 1; // 1-5 scale
+      const index = categories[category]?.indexOf(value);
+      return index !== -1 ? index + 1 : null;
     };
 
     return filteredEntries.map(([date, entry]) => ({
@@ -274,7 +368,11 @@ const HealthTrackerApp = () => {
       libido: entry.libido ? categoryToValue('libido', entry.libido) : null,
       sueño: entry.sueno ? categoryToValue('sueno', entry.sueno) : null,
       ánimo: entry.estadoAnimo ? categoryToValue('estadoAnimo', entry.estadoAnimo) : null,
-      emoción: entry.emocion ? categoryToValue('emocion', entry.emocion) : null
+      emoción: entry.emocion ? categoryToValue('emocion', entry.emocion) : null,
+      energía: entry.energiaFisica ? categoryToValue('energiaFisica', entry.energiaFisica) : null,
+      claridad: entry.claridadMental ? categoryToValue('claridadMental', entry.claridadMental) : null,
+      motivación: entry.motivacion ? categoryToValue('motivacion', entry.motivacion) : null,
+      estrés: entry.estres ? categoryToValue('estres', entry.estres) : null
     }));
   };
 
@@ -307,7 +405,6 @@ const HealthTrackerApp = () => {
         return;
       }
       
-      const bgClass = `bg-[${categoryColor}]`;
       addOrUpdateCustomCategory({ name: categoryName, color: categoryColor });
       setCategoryName('');
       setCategoryColor('#a855f7');
@@ -337,7 +434,6 @@ const HealthTrackerApp = () => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
-          {/* Header */}
           <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 flex justify-between items-center">
             <h3 className="text-2xl font-bold text-white">
               {showForm ? (editingCategory !== null ? 'Editar Emoción' : 'Nueva Emoción') : 'Gestionar Emociones'}
@@ -350,12 +446,9 @@ const HealthTrackerApp = () => {
             </button>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto p-6">
             {!showForm ? (
-              // Lista de emociones
               <div className="space-y-4">
-                {/* Toggle para mostrar archivadas */}
                 <div className="flex items-center justify-between bg-gray-100 p-3 rounded-lg">
                   <span className="text-sm font-semibold text-gray-700">
                     Mostrar archivadas ({archivedEmotions.length})
@@ -374,7 +467,6 @@ const HealthTrackerApp = () => {
                   </button>
                 </div>
 
-                {/* Emociones activas */}
                 {activeEmotions.length === 0 && !showArchivedEmotions ? (
                   <div className="text-center py-8">
                     <p className="text-gray-500 mb-2">No has creado emociones personalizadas aún</p>
@@ -424,9 +516,7 @@ const HealthTrackerApp = () => {
                                   <Edit2 className="w-5 h-5" />
                                 </button>
                                 <button
-                                  onClick={() => {
-                                    archiveCustomCategory(index);
-                                  }}
+                                  onClick={() => archiveCustomCategory(index)}
                                   className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                                   title="Archivar"
                                 >
@@ -439,7 +529,6 @@ const HealthTrackerApp = () => {
                       </div>
                     )}
 
-                    {/* Emociones archivadas */}
                     {showArchivedEmotions && archivedEmotions.length > 0 && (
                       <div className="space-y-2 mt-6 pt-6 border-t-2 border-gray-200">
                         <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Archivadas</h4>
@@ -496,7 +585,6 @@ const HealthTrackerApp = () => {
                 </button>
               </div>
             ) : (
-              // Formulario de crear/editar
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -556,10 +644,9 @@ const HealthTrackerApp = () => {
   };
 
   return (
-    <>
-      <style>{styles}</style>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      {/* Toast de éxito */}
+  <>
+    <style>{styles}</style>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {showToast && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
           <div className="bg-green-500 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3">
@@ -583,10 +670,10 @@ const HealthTrackerApp = () => {
             <p className="text-purple-100">Monitorea tu bienestar diario</p>
           </div>
 
-          <div className="flex border-b bg-gray-50">
+          <div className="flex border-b bg-gray-50 overflow-x-auto">
             <button
               onClick={() => setActiveView('registro')}
-              className={`flex-1 py-4 px-6 font-semibold transition-all ${
+              className={`flex-1 py-4 px-6 font-semibold transition-all whitespace-nowrap ${
                 activeView === 'registro'
                   ? 'bg-white text-purple-600 border-b-2 border-purple-600'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -597,7 +684,7 @@ const HealthTrackerApp = () => {
             </button>
             <button
               onClick={() => setActiveView('calendario')}
-              className={`flex-1 py-4 px-6 font-semibold transition-all ${
+              className={`flex-1 py-4 px-6 font-semibold transition-all whitespace-nowrap ${
                 activeView === 'calendario'
                   ? 'bg-white text-purple-600 border-b-2 border-purple-600'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -608,7 +695,7 @@ const HealthTrackerApp = () => {
             </button>
             <button
               onClick={() => setActiveView('estadisticas')}
-              className={`flex-1 py-4 px-6 font-semibold transition-all ${
+              className={`flex-1 py-4 px-6 font-semibold transition-all whitespace-nowrap ${
                 activeView === 'estadisticas'
                   ? 'bg-white text-purple-600 border-b-2 border-purple-600'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -622,8 +709,8 @@ const HealthTrackerApp = () => {
           <div className="p-6 md:p-8">
             {activeView === 'registro' && (
               <div>
-                <div className="mb-6 flex justify-between items-center">
-                  <div className="flex-1">
+                <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="flex-1 w-full">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Fecha del registro
                     </label>
@@ -636,20 +723,19 @@ const HealthTrackerApp = () => {
                   </div>
                   <button
                     onClick={() => setShowCategoryModal(true)}
-                    className="ml-4 px-4 py-3 bg-purple-100 text-purple-700 rounded-lg font-semibold hover:bg-purple-200 transition-colors flex items-center gap-2"
+                    className="w-full md:w-auto px-4 py-3 bg-purple-100 text-purple-700 rounded-lg font-semibold hover:bg-purple-200 transition-colors flex items-center justify-center gap-2"
                   >
                     <Settings className="w-5 h-5" />
                     Gestionar Emociones
                   </button>
                 </div>
 
-                {/* Gestión de emociones personalizadas - Removido */}
-
                 <div className="space-y-6">
+                  {/* Categorías de escala */}
                   {Object.keys(categories).map((category) => (
                     <div key={category} className="bg-gray-50 p-6 rounded-xl">
-                      <label className="block text-lg font-semibold text-gray-800 mb-3 capitalize">
-                        {category === 'estadoAnimo' ? 'Estado de ánimo' : category === 'emocion' ? 'Emoción' : category === 'sueno' ? 'Sueño' :category}
+                      <label className="block text-lg font-semibold text-gray-800 mb-3">
+                        {categoryLabels[category]}
                       </label>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                         {categories[category].map((option) => {
@@ -676,6 +762,66 @@ const HealthTrackerApp = () => {
                     </div>
                   ))}
 
+                  {/* Checkboxes simples */}
+                  <div className="bg-gray-50 p-6 rounded-xl">
+                    <label className="block text-lg font-semibold text-gray-800 mb-4">
+                      Indicadores del día
+                    </label>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-3 cursor-pointer bg-white p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.despertaresNocturnos}
+                          onChange={() => toggleCheckbox('despertaresNocturnos')}
+                          className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                        <span className="text-gray-700 font-medium">Despertares nocturnos</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer bg-white p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.suenosVividos}
+                          onChange={() => toggleCheckbox('suenosVividos')}
+                          className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                        <span className="text-gray-700 font-medium">Sueños vívidos</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer bg-white p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.periodo}
+                          onChange={() => toggleCheckbox('periodo')}
+                          className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                        <span className="text-gray-700 font-medium">Periodo</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Síntomas físicos */}
+                  <div className="bg-gray-50 p-6 rounded-xl">
+                    <label className="block text-lg font-semibold text-gray-800 mb-4">
+                      Síntomas físicos
+                    </label>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      {sintomasFisicosOptions.map((sintoma) => (
+                        <label
+                          key={sintoma}
+                          className="flex items-center gap-3 cursor-pointer bg-white p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={(formData.sintomasFisicos || []).includes(sintoma)}
+                            onChange={() => toggleSintoma(sintoma)}
+                            className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                          />
+                          <span className="text-gray-700 font-medium">{sintoma}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Comentarios */}
                   <div className="bg-gray-50 p-6 rounded-xl">
                     <label className="block text-lg font-semibold text-gray-800 mb-3">
                       Comentarios
@@ -766,42 +912,57 @@ const HealthTrackerApp = () => {
                       })}
                     </h3>
                     <div className="grid md:grid-cols-2 gap-4 mb-4">
-                      <div className="bg-white p-4 rounded-lg">
-                        <span className="font-semibold text-gray-700">Dolor:</span>
-                        <span className={`ml-2 px-3 py-1 rounded-full text-white text-sm ${getColorForCategory('dolor', entries[selectedDate].dolor)}`}>
-                          {entries[selectedDate].dolor}
-                        </span>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg">
-                        <span className="font-semibold text-gray-700">Libido:</span>
-                        <span className={`ml-2 px-3 py-1 rounded-full text-white text-sm ${getColorForCategory('libido', entries[selectedDate].libido)}`}>
-                          {entries[selectedDate].libido}
-                        </span>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg">
-                        <span className="font-semibold text-gray-700">Sueño:</span>
-                        <span className={`ml-2 px-3 py-1 rounded-full text-white text-sm ${getColorForCategory('sueno', entries[selectedDate].sueno)}`}>
-                          {entries[selectedDate].sueno}
-                        </span>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg">
-                        <span className="font-semibold text-gray-700">Estado de Ánimo:</span>
-                        <span className={`ml-2 px-3 py-1 rounded-full text-white text-sm ${getColorForCategory('estadoAnimo', entries[selectedDate].estadoAnimo)}`}>
-                          {entries[selectedDate].estadoAnimo}
-                        </span>
-                      </div>
-                      {entries[selectedDate].emocion && (
-                        <div className="bg-white p-4 rounded-lg">
-                          <span className="font-semibold text-gray-700">Emoción:</span>
-                          <span 
-                            className={`ml-2 px-3 py-1 rounded-full text-white text-sm ${getColorForCategory('emocion', entries[selectedDate].emocion)}`}
-                            style={getColorStyle('emocion', entries[selectedDate].emocion)}
-                          >
-                            {entries[selectedDate].emocion}
-                          </span>
-                        </div>
+                      {Object.keys(categories).map((category) => 
+                        entries[selectedDate][category] && (
+                          <div key={category} className="bg-white p-4 rounded-lg">
+                            <span className="font-semibold text-gray-700">{categoryLabels[category]}:</span>
+                            <span 
+                              className={`ml-2 px-3 py-1 rounded-full text-white text-sm ${getColorForCategory(category, entries[selectedDate][category])}`}
+                              style={getColorStyle(category, entries[selectedDate][category])}
+                            >
+                              {entries[selectedDate][category]}
+                            </span>
+                          </div>
+                        )
                       )}
                     </div>
+
+                    {/* Checkboxes */}
+                    <div className="bg-white p-4 rounded-lg mb-4">
+                      <span className="font-semibold text-gray-700 block mb-2">Indicadores:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {entries[selectedDate].despertaresNocturnos && (
+                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                            Despertares nocturnos
+                          </span>
+                        )}
+                        {entries[selectedDate].suenosVividos && (
+                          <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+                            Sueños vívidos
+                          </span>
+                        )}
+                        {entries[selectedDate].periodo && (
+                          <span className="px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm">
+                            Periodo
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Síntomas físicos */}
+                    {entries[selectedDate].sintomasFisicos && entries[selectedDate].sintomasFisicos.length > 0 && (
+                      <div className="bg-white p-4 rounded-lg mb-4">
+                        <span className="font-semibold text-gray-700 block mb-2">Síntomas físicos:</span>
+                        <div className="flex flex-wrap gap-2">
+                          {entries[selectedDate].sintomasFisicos.map((sintoma) => (
+                            <span key={sintoma} className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
+                              {sintoma}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {entries[selectedDate].comentarios && (
                       <div className="bg-white p-4 rounded-lg">
                         <span className="font-semibold text-gray-700 block mb-2">Comentarios:</span>
@@ -819,9 +980,7 @@ const HealthTrackerApp = () => {
                   <h3 className="text-lg font-bold text-gray-800 mb-4">Filtrar por fechas</h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Fecha inicio
-                      </label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha inicio</label>
                       <input
                         type="date"
                         value={dateRange.start}
@@ -830,9 +989,7 @@ const HealthTrackerApp = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Fecha fin
-                      </label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha fin</label>
                       <input
                         type="date"
                         value={dateRange.end}
@@ -841,7 +998,7 @@ const HealthTrackerApp = () => {
                       />
                     </div>
                   </div>
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       onClick={() => setDateRange({
                         start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
@@ -874,18 +1031,14 @@ const HealthTrackerApp = () => {
 
                 {stats ? (
                   <div className="space-y-4">
-                    {/* Acordeón: Resumen General */}
+                    {/* Resumen General */}
                     <div className="bg-white rounded-xl shadow-md overflow-hidden">
                       <button
                         onClick={() => toggleAccordion('resumen')}
                         className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
                       >
                         <h3 className="text-xl font-bold text-gray-800">📊 Resumen General</h3>
-                        {openAccordion === 'resumen' ? (
-                          <ChevronUp className="w-6 h-6 text-purple-600" />
-                        ) : (
-                          <ChevronDown className="w-6 h-6 text-purple-600" />
-                        )}
+                        {openAccordion === 'resumen' ? <ChevronUp className="w-6 h-6 text-purple-600" /> : <ChevronDown className="w-6 h-6 text-purple-600" />}
                       </button>
                       {openAccordion === 'resumen' && (
                         <div className="p-6">
@@ -903,9 +1056,7 @@ const HealthTrackerApp = () => {
                           <div className="space-y-6">
                             {Object.keys(categories).map((category) => (
                               <div key={category} className="bg-gray-50 p-6 rounded-xl">
-                                <h4 className="text-lg font-bold text-gray-800 mb-4 capitalize">
-                                  {category === 'estadoAnimo' ? 'Estado de Ánimo' : category === 'emocion' ? 'Emoción' : category}
-                                </h4>
+                                <h4 className="text-lg font-bold text-gray-800 mb-4">{categoryLabels[category]}</h4>
                                 <div className="space-y-3">
                                   {categories[category].map((option) => {
                                     const count = stats[category][option] || 0;
@@ -934,124 +1085,87 @@ const HealthTrackerApp = () => {
                                 </div>
                               </div>
                             ))}
+
+                            {/* Estadísticas de checkboxes */}
+                            <div className="bg-gray-50 p-6 rounded-xl">
+                              <h4 className="text-lg font-bold text-gray-800 mb-4">Indicadores</h4>
+                              <div className="grid md:grid-cols-3 gap-4">
+                                <div className="bg-white p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 mb-1">Despertares nocturnos</p>
+                                  <p className="text-2xl font-bold text-blue-600">{stats.despertaresNocturnos.true} días</p>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 mb-1">Sueños vívidos</p>
+                                  <p className="text-2xl font-bold text-purple-600">{stats.suenosVividos.true} días</p>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 mb-1">Periodo</p>
+                                  <p className="text-2xl font-bold text-pink-600">{stats.periodo.true} días</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Síntomas físicos */}
+                            {Object.keys(stats.sintomasFisicos).length > 0 && (
+                              <div className="bg-gray-50 p-6 rounded-xl">
+                                <h4 className="text-lg font-bold text-gray-800 mb-4">Síntomas Físicos</h4>
+                                <div className="space-y-3">
+                                  {Object.entries(stats.sintomasFisicos).map(([sintoma, count]) => {
+                                    const total = Object.entries(entries).filter(([date]) => date >= dateRange.start && date <= dateRange.end).length;
+                                    const percentage = total > 0 ? (count / total) * 100 : 0;
+                                    return (
+                                      <div key={sintoma} className="flex items-center gap-4">
+                                        <span className="w-40 text-sm font-medium text-gray-700">{sintoma}</span>
+                                        <div className="flex-1 bg-gray-200 rounded-full h-8 overflow-hidden">
+                                          <div
+                                            className="h-full bg-red-500 transition-all duration-500 flex items-center justify-end pr-3"
+                                            style={{ width: `${percentage}%` }}
+                                          >
+                                            <span className="text-white text-sm font-bold">
+                                              {count} ({percentage.toFixed(0)}%)
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Acordeón: Gráficos de Tendencias */}
+                    {/* Gráficos de Tendencias */}
                     <div className="bg-white rounded-xl shadow-md overflow-hidden">
                       <button
                         onClick={() => toggleAccordion('graficos')}
                         className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
                       >
                         <h3 className="text-xl font-bold text-gray-800">📈 Gráficos de Tendencias</h3>
-                        {openAccordion === 'graficos' ? (
-                          <ChevronUp className="w-6 h-6 text-purple-600" />
-                        ) : (
-                          <ChevronDown className="w-6 h-6 text-purple-600" />
-                        )}
+                        {openAccordion === 'graficos' ? <ChevronUp className="w-6 h-6 text-purple-600" /> : <ChevronDown className="w-6 h-6 text-purple-600" />}
                       </button>
                       {openAccordion === 'graficos' && chartData && (
-                        <div className="p-6 space-y-8">
-                          {/* Gráfico de Dolor */}
-                          <div className="bg-gray-50 p-6 rounded-xl">
-                            <h4 className="text-lg font-bold text-gray-800 mb-4">Dolor</h4>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <LineChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis domain={[0, 6]} ticks={[1, 2, 3, 4, 5]} />
-                                <Tooltip 
-                                  formatter={(value) => {
-                                    const labels = ['Sin dolor', 'Leve', 'Moderado', 'Fuerte', 'Muy fuerte'];
-                                    return labels[value - 1] || value;
-                                  }}
-                                />
-                                <Legend />
-                                <Line type="monotone" dataKey="dolor" stroke="#ef4444" strokeWidth={3} dot={{ r: 5 }} name="Dolor" />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
-
-                          {/* Gráfico de Libido */}
-                          <div className="bg-gray-50 p-6 rounded-xl">
-                            <h4 className="text-lg font-bold text-gray-800 mb-4">Libido</h4>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <LineChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis domain={[0, 6]} ticks={[1, 2, 3, 4, 5]} />
-                                <Tooltip 
-                                  formatter={(value) => {
-                                    const labels = ['Muy baja', 'Baja', 'Normal', 'Alta', 'Muy alta'];
-                                    return labels[value - 1] || value;
-                                  }}
-                                />
-                                <Legend />
-                                <Line type="monotone" dataKey="libido" stroke="#ec4899" strokeWidth={3} dot={{ r: 5 }} name="Libido" />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
-
-                          {/* Gráfico de Sueño */}
-                          <div className="bg-gray-50 p-6 rounded-xl">
-                            <h4 className="text-lg font-bold text-gray-800 mb-4">Sueño</h4>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <LineChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis domain={[0, 6]} ticks={[1, 2, 3, 4, 5]} />
-                                <Tooltip 
-                                  formatter={(value) => {
-                                    const labels = ['Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente'];
-                                    return labels[value - 1] || value;
-                                  }}
-                                />
-                                <Legend />
-                                <Line type="monotone" dataKey="sueño" stroke="#10b981" strokeWidth={3} dot={{ r: 5 }} name="Sueño" />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
-
-                          {/* Gráfico de Estado de Ánimo */}
-                          <div className="bg-gray-50 p-6 rounded-xl">
-                            <h4 className="text-lg font-bold text-gray-800 mb-4">Estado de Ánimo</h4>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <LineChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis domain={[0, 6]} ticks={[1, 2, 3, 4, 5]} />
-                                <Tooltip 
-                                  formatter={(value) => {
-                                    const labels = ['Muy triste', 'Triste', 'Neutral', 'Feliz', 'Muy feliz'];
-                                    return labels[value - 1] || value;
-                                  }}
-                                />
-                                <Legend />
-                                <Line type="monotone" dataKey="ánimo" stroke="#f59e0b" strokeWidth={3} dot={{ r: 5 }} name="Estado de ánimo" />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
-
-                          {/* Gráfico de Emoción */}
-                          <div className="bg-gray-50 p-6 rounded-xl">
-                            <h4 className="text-lg font-bold text-gray-800 mb-4">Emoción</h4>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <LineChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis domain={[0, 6]} ticks={[1, 2, 3, 4, 5]} />
-                                <Tooltip 
-                                  formatter={(value) => {
-                                    return categories.emocion[value - 1] || value;
-                                  }}
-                                />
-                                <Legend />
-                                <Line type="monotone" dataKey="emoción" stroke="#a855f7" strokeWidth={3} dot={{ r: 5 }} name="Emoción" />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
+                        <div className="p-6">
+                          <ResponsiveContainer width="100%" height={400}>
+                            <LineChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="date" />
+                              <YAxis domain={[0, 6]} ticks={[1, 2, 3, 4, 5]} />
+                              <Tooltip />
+                              <Legend />
+                              <Line type="monotone" dataKey="dolor" stroke="#ef4444" strokeWidth={2} name="Dolor" />
+                              <Line type="monotone" dataKey="libido" stroke="#ec4899" strokeWidth={2} name="Libido" />
+                              <Line type="monotone" dataKey="sueño" stroke="#10b981" strokeWidth={2} name="Sueño" />
+                              <Line type="monotone" dataKey="ánimo" stroke="#f59e0b" strokeWidth={2} name="Ánimo" />
+                              <Line type="monotone" dataKey="emoción" stroke="#a855f7" strokeWidth={2} name="Emoción" />
+                              <Line type="monotone" dataKey="energía" stroke="#84cc16" strokeWidth={2} name="Energía" />
+                              <Line type="monotone" dataKey="claridad" stroke="#06b6d4" strokeWidth={2} name="Claridad" />
+                              <Line type="monotone" dataKey="motivación" stroke="#eab308" strokeWidth={2} name="Motivación" />
+                              <Line type="monotone" dataKey="estrés" stroke="#f97316" strokeWidth={2} name="Estrés" />
+                            </LineChart>
+                          </ResponsiveContainer>
                         </div>
                       )}
                     </div>
@@ -1066,11 +1180,11 @@ const HealthTrackerApp = () => {
           </div>
         </div>
       </div>
-    </div>
     
-    {showCategoryModal && <CategoryModal />}
-    </>
-  );
+      {showCategoryModal && <CategoryModal />}
+    </div>
+  </>
+);
 };
 
 export default HealthTrackerApp;
