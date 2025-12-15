@@ -34,6 +34,16 @@ const HealthTrackerApp = () => {
   const [editingCategory, setEditingCategory] = useState(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showArchivedEmotions, setShowArchivedEmotions] = useState(false);
+  const [selectedGraphCategories, setSelectedGraphCategories] = useState({
+    dolor: true,
+    libido: true,
+    sueño: true,
+    ánimo: true,
+    energía: true,
+    claridad: true,
+    motivación: true,
+    estrés: true
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem('healthEntries');
@@ -368,7 +378,6 @@ const HealthTrackerApp = () => {
       libido: entry.libido ? categoryToValue('libido', entry.libido) : null,
       sueño: entry.sueno ? categoryToValue('sueno', entry.sueno) : null,
       ánimo: entry.estadoAnimo ? categoryToValue('estadoAnimo', entry.estadoAnimo) : null,
-      emoción: entry.emocion ? categoryToValue('emocion', entry.emocion) : null,
       energía: entry.energiaFisica ? categoryToValue('energiaFisica', entry.energiaFisica) : null,
       claridad: entry.claridadMental ? categoryToValue('claridadMental', entry.claridadMental) : null,
       motivación: entry.motivacion ? categoryToValue('motivacion', entry.motivacion) : null,
@@ -381,6 +390,29 @@ const HealthTrackerApp = () => {
 
   const toggleAccordion = (section) => {
     setOpenAccordion(openAccordion === section ? null : section);
+  };
+  
+  const toggleGraphCategory = (category) => {
+    setSelectedGraphCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
+  const selectAllGraphCategories = () => {
+    const allSelected = {};
+    Object.keys(selectedGraphCategories).forEach(key => {
+      allSelected[key] = true;
+    });
+    setSelectedGraphCategories(allSelected);
+  };
+
+  const deselectAllGraphCategories = () => {
+    const allDeselected = {};
+    Object.keys(selectedGraphCategories).forEach(key => {
+      allDeselected[key] = false;
+    });
+    setSelectedGraphCategories(allDeselected);
   };
 
   const CategoryModal = () => {
@@ -1148,6 +1180,44 @@ const HealthTrackerApp = () => {
                       </button>
                       {openAccordion === 'graficos' && chartData && (
                         <div className="p-6">
+                          {/* Selector de categorías */}
+                          <div className="mb-6 bg-gray-50 p-4 rounded-xl">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-sm font-bold text-gray-700 uppercase">Filtrar categorías</h4>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={selectAllGraphCategories}
+                                  className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors font-medium"
+                                >
+                                  Todas
+                                </button>
+                                <button
+                                  onClick={deselectAllGraphCategories}
+                                  className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                >
+                                  Ninguna
+                                </button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                              {Object.keys(selectedGraphCategories).map((category) => (
+                                <label
+                                  key={category}
+                                  className="flex items-center gap-2 cursor-pointer bg-white p-3 rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedGraphCategories[category]}
+                                    onChange={() => toggleGraphCategory(category)}
+                                    className="w-4 h-4 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700 capitalize">{category}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Gráfico */}
                           <ResponsiveContainer width="100%" height={400}>
                             <LineChart data={chartData}>
                               <CartesianGrid strokeDasharray="3 3" />
@@ -1155,15 +1225,30 @@ const HealthTrackerApp = () => {
                               <YAxis domain={[0, 6]} ticks={[1, 2, 3, 4, 5]} />
                               <Tooltip />
                               <Legend />
-                              <Line type="monotone" dataKey="dolor" stroke="#ef4444" strokeWidth={2} name="Dolor" />
-                              <Line type="monotone" dataKey="libido" stroke="#ec4899" strokeWidth={2} name="Libido" />
-                              <Line type="monotone" dataKey="sueño" stroke="#10b981" strokeWidth={2} name="Sueño" />
-                              <Line type="monotone" dataKey="ánimo" stroke="#f59e0b" strokeWidth={2} name="Ánimo" />
-                              <Line type="monotone" dataKey="emoción" stroke="#a855f7" strokeWidth={2} name="Emoción" />
-                              <Line type="monotone" dataKey="energía" stroke="#84cc16" strokeWidth={2} name="Energía" />
-                              <Line type="monotone" dataKey="claridad" stroke="#06b6d4" strokeWidth={2} name="Claridad" />
-                              <Line type="monotone" dataKey="motivación" stroke="#eab308" strokeWidth={2} name="Motivación" />
-                              <Line type="monotone" dataKey="estrés" stroke="#f97316" strokeWidth={2} name="Estrés" />
+                              {selectedGraphCategories.dolor && (
+                                <Line type="monotone" dataKey="dolor" stroke="#ef4444" strokeWidth={2} name="Dolor" />
+                              )}
+                              {selectedGraphCategories.libido && (
+                                <Line type="monotone" dataKey="libido" stroke="#ec4899" strokeWidth={2} name="Libido" />
+                              )}
+                              {selectedGraphCategories.sueño && (
+                                <Line type="monotone" dataKey="sueño" stroke="#10b981" strokeWidth={2} name="Sueño" />
+                              )}
+                              {selectedGraphCategories.ánimo && (
+                                <Line type="monotone" dataKey="ánimo" stroke="#f59e0b" strokeWidth={2} name="Ánimo" />
+                              )}
+                              {selectedGraphCategories.energía && (
+                                <Line type="monotone" dataKey="energía" stroke="#84cc16" strokeWidth={2} name="Energía" />
+                              )}
+                              {selectedGraphCategories.claridad && (
+                                <Line type="monotone" dataKey="claridad" stroke="#06b6d4" strokeWidth={2} name="Claridad" />
+                              )}
+                              {selectedGraphCategories.motivación && (
+                                <Line type="monotone" dataKey="motivación" stroke="#eab308" strokeWidth={2} name="Motivación" />
+                              )}
+                              {selectedGraphCategories.estrés && (
+                                <Line type="monotone" dataKey="estrés" stroke="#f97316" strokeWidth={2} name="Estrés" />
+                              )}
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
