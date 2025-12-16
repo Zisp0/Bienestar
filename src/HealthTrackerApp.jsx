@@ -25,6 +25,10 @@ const HealthTrackerApp = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [entries, setEntries] = useState({});
   const [showToast, setShowToast] = useState(false);
+  const [registroHora, setRegistroHora] = useState(new Date().toTimeString().slice(0, 5));
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [dayRecords, setDayRecords] = useState([]);
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -34,6 +38,7 @@ const HealthTrackerApp = () => {
   const [editingCategory, setEditingCategory] = useState(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showArchivedEmotions, setShowArchivedEmotions] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [selectedGraphCategories, setSelectedGraphCategories] = useState({
     dolor: true,
     libido: true,
@@ -54,11 +59,14 @@ const HealthTrackerApp = () => {
     if (storedCategories) {
       setCustomCategories(JSON.parse(storedCategories));
     }
+    setIsInitialized(true);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('customCategories', JSON.stringify(customCategories));
-  }, [customCategories]);
+    if (isInitialized) {
+      localStorage.setItem('customCategories', JSON.stringify(customCategories));
+    }
+  }, [customCategories, isInitialized]);
 
   const [formData, setFormData] = useState({
     dolor: '',
@@ -75,6 +83,7 @@ const HealthTrackerApp = () => {
     despertaresNocturnos: false,
     suenosVividos: false,
     periodo: false,
+    irritabilidad: false,
     sintomasFisicos: [],
     comentarios: ''
   });
@@ -185,10 +194,28 @@ const HealthTrackerApp = () => {
     
     try {
       const newEntries = { ...entries };
-      newEntries[selectedDate] = { 
+      
+      // Convertir datos antiguos (formato objeto) a nuevo formato (array)
+      if (!newEntries[selectedDate]) {
+        newEntries[selectedDate] = [];
+      } else if (!Array.isArray(newEntries[selectedDate])) {
+        newEntries[selectedDate] = [newEntries[selectedDate]];
+      }
+      
+      const recordId = editingRecord?.id || `${Date.now()}-${Math.random()}`;
+      const newRecord = {
+        id: recordId,
+        hora: registroHora,
         ...formData,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       };
+      
+      if (editingRecord) {
+        const idx = newEntries[selectedDate].findIndex(r => r.id === editingRecord.id);
+        if (idx >= 0) newEntries[selectedDate][idx] = newRecord;
+      } else {
+        newEntries[selectedDate].push(newRecord);
+      }
       
       setEntries(newEntries);
       localStorage.setItem('healthEntries', JSON.stringify(newEntries));
@@ -211,11 +238,14 @@ const HealthTrackerApp = () => {
         despertaresNocturnos: false,
         suenosVividos: false,
         periodo: false,
+        irritabilidad: false,
         sintomasFisicos: [],
         comentarios: ''
       });
       
-      setSelectedDate(new Date().toISOString().split('T')[0]);
+      setRegistroHora(new Date().toTimeString().slice(0, 5));
+      setShowEditModal(false);
+      setEditingRecord(null);
       
     } catch (error) {
       alert('❌ Error al guardar el registro. Por favor intenta de nuevo.');
@@ -242,33 +272,66 @@ const HealthTrackerApp = () => {
   };
 
   useEffect(() => {
-    const entry = entries[selectedDate];
-    if (entry) {
-      setFormData({
-        ...entry,
-        sintomasFisicos: entry.sintomasFisicos || []
-      });
+    const dayEntriesArray = entries[selectedDate];
+    if (Array.isArray(dayEntriesArray)) {
+      setDayRecords(dayEntriesArray);
+    } else if (dayEntriesArray && typeof dayEntriesArray === 'object') {
+      setDayRecords([dayEntriesArray]);
     } else {
-      setFormData({
-        dolor: '',
-        libido: '',
-        sueno: '',
-        estadoAnimo: '',
-        emocion: '',
-        energiaFisica: '',
-        claridadMental: '',
-        motivacion: '',
-        estres: '',
-        sensacionCorporal: '',
-        actividadFisica: '',
-        despertaresNocturnos: false,
-        suenosVividos: false,
-        periodo: false,
-        sintomasFisicos: [],
-        comentarios: ''
-      });
+      setDayRecords([]);
     }
   }, [selectedDate, entries]);
+
+  const openEditModal = (record) => {
+    setEditingRecord(record);
+    setFormData({
+      ...record,
+      sintomasFisicos: record.sintomasFisicos || []
+    });
+    setRegistroHora(record.hora);
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditingRecord(null);
+    setFormData({
+      dolor: '',
+      libido: '',
+      sueno: '',
+      estadoAnimo: '',
+      emocion: '',
+      energiaFisica: '',
+      claridadMental: '',
+      motivacion: '',
+      estres: '',
+      sensacionCorporal: '',
+      actividadFisica: '',
+      despertaresNocturnos: false,
+      suenosVividos: false,
+      periodo: false,
+      irritabilidad: false,
+      sintomasFisicos: [],
+      comentarios: ''
+    });
+    setRegistroHora(new Date().toTimeString().slice(0, 5));
+  };
+
+  const deleteRecord = (recordId) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este registro?')) return;
+    
+    const newEntries = { ...entries };
+    if (newEntries[selectedDate]) {
+      newEntries[selectedDate] = newEntries[selectedDate].filter(r => r.id !== recordId);
+      if (newEntries[selectedDate].length === 0) {
+        delete newEntries[selectedDate];
+      }
+      setEntries(newEntries);
+      localStorage.setItem('healthEntries', JSON.stringify(newEntries));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
 
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
@@ -312,10 +375,18 @@ const HealthTrackerApp = () => {
     return {};
   };
 
+  const getTotalRecords = () => {
+    return Object.entries(entries)
+      .filter(([date]) => date >= dateRange.start && date <= dateRange.end)
+      .reduce((total, [, entryOrArray]) => {
+        return total + (Array.isArray(entryOrArray) ? entryOrArray.length : 1);
+      }, 0);
+  };
+
   const getStats = () => {
     const filteredEntries = Object.entries(entries).filter(([date]) => {
       return date >= dateRange.start && date <= dateRange.end;
-    }).map(([, entry]) => entry);
+    }).flatMap(([, entryOrArray]) => Array.isArray(entryOrArray) ? entryOrArray : [entryOrArray]);
     
     if (filteredEntries.length === 0) return null;
 
@@ -334,6 +405,7 @@ const HealthTrackerApp = () => {
       despertaresNocturnos: { true: 0, false: 0 },
       suenosVividos: { true: 0, false: 0 },
       periodo: { true: 0, false: 0 },
+      irritabilidad: { true: 0, false: 0 },
       sintomasFisicos: {}
     };
 
@@ -348,6 +420,7 @@ const HealthTrackerApp = () => {
       stats.despertaresNocturnos[entry.despertaresNocturnos ? 'true' : 'false']++;
       stats.suenosVividos[entry.suenosVividos ? 'true' : 'false']++;
       stats.periodo[entry.periodo ? 'true' : 'false']++;
+      stats.irritabilidad[entry.irritabilidad ? 'true' : 'false']++;
 
       // Síntomas físicos
       if (entry.sintomasFisicos && Array.isArray(entry.sintomasFisicos)) {
@@ -372,27 +445,29 @@ const HealthTrackerApp = () => {
       return index !== -1 ? index + 1 : null;
     };
 
-    return filteredEntries.map(([date, entry]) => ({
-      date: new Date(date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }),
-      dolor: entry.dolor ? categoryToValue('dolor', entry.dolor) : null,
-      libido: entry.libido ? categoryToValue('libido', entry.libido) : null,
-      sueño: entry.sueno ? categoryToValue('sueno', entry.sueno) : null,
-      ánimo: entry.estadoAnimo ? categoryToValue('estadoAnimo', entry.estadoAnimo) : null,
-      energía: entry.energiaFisica ? categoryToValue('energiaFisica', entry.energiaFisica) : null,
-      claridad: entry.claridadMental ? categoryToValue('claridadMental', entry.claridadMental) : null,
-      motivación: entry.motivacion ? categoryToValue('motivacion', entry.motivacion) : null,
-      estrés: entry.estres ? categoryToValue('estres', entry.estres) : null,
-
-
-      dolorLabel: entry.dolor,
-      libidoLabel: entry.libido,
-      sueñoLabel: entry.sueno,
-      ánimoLabel: entry.estadoAnimo,
-      energíaLabel: entry.energiaFisica,
-      claridadLabel: entry.claridadMental,
-      motivaciónLabel: entry.motivacion,
-      estrésLabel: entry.estres
-    }));
+    return filteredEntries.flatMap(([date, entries]) => {
+      const dateArray = Array.isArray(entries) ? entries : [entries];
+      const sortedArray = [...dateArray].sort((a, b) => a.hora.localeCompare(b.hora));
+      return sortedArray.map((entry, idx) => ({
+        date: new Date(date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }) + (dateArray.length > 1 ? ` (${entry.hora})` : ''),
+        dolor: entry.dolor ? categoryToValue('dolor', entry.dolor) : null,
+        libido: entry.libido ? categoryToValue('libido', entry.libido) : null,
+        sueño: entry.sueno ? categoryToValue('sueno', entry.sueno) : null,
+        ánimo: entry.estadoAnimo ? categoryToValue('estadoAnimo', entry.estadoAnimo) : null,
+        energía: entry.energiaFisica ? categoryToValue('energiaFisica', entry.energiaFisica) : null,
+        claridad: entry.claridadMental ? categoryToValue('claridadMental', entry.claridadMental) : null,
+        motivación: entry.motivacion ? categoryToValue('motivacion', entry.motivacion) : null,
+        estrés: entry.estres ? categoryToValue('estres', entry.estres) : null,
+        dolorLabel: entry.dolor,
+        libidoLabel: entry.libido,
+        sueñoLabel: entry.sueno,
+        ánimoLabel: entry.estadoAnimo,
+        energíaLabel: entry.energiaFisica,
+        claridadLabel: entry.claridadMental,
+        motivaciónLabel: entry.motivacion,
+        estrésLabel: entry.estres
+      }));
+    });
   };
 
   const stats = getStats();
@@ -785,6 +860,17 @@ const HealthTrackerApp = () => {
                       className="w-full md:w-auto px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
+                  <div className="flex-1 w-full">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Hora del registro
+                    </label>
+                    <input
+                      type="time"
+                      value={registroHora}
+                      onChange={(e) => setRegistroHora(e.target.value)}
+                      className="w-full md:w-auto px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
                   <button
                     onClick={() => setShowCategoryModal(true)}
                     className="w-full md:w-auto px-4 py-3 bg-purple-100 text-purple-700 rounded-lg font-semibold hover:bg-purple-200 transition-colors flex items-center justify-center gap-2"
@@ -858,6 +944,15 @@ const HealthTrackerApp = () => {
                           className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
                         />
                         <span className="text-gray-700 font-medium">Periodo</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer bg-white p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.irritabilidad}
+                          onChange={() => toggleCheckbox('irritabilidad')}
+                          className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                        <span className="text-gray-700 font-medium">Irritabilidad</span>
                       </label>
                     </div>
                   </div>
@@ -946,6 +1041,12 @@ const HealthTrackerApp = () => {
                     const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     const hasEntry = entries[dateStr];
                     const isSelected = dateStr === selectedDate;
+                    
+                    // Verificar si algún registro del día tiene período marcado
+                    const hasPeriod = hasEntry && (Array.isArray(hasEntry) ? hasEntry : [hasEntry]).some(r => r.periodo);
+                    const dayStyle = hasPeriod 
+                      ? 'bg-gradient-to-b from-green-100 to-red-100 hover:from-green-200 hover:to-red-200 text-green-800'
+                      : 'bg-green-100 hover:bg-green-200 text-green-800';
 
                     return (
                       <button
@@ -955,7 +1056,7 @@ const HealthTrackerApp = () => {
                           isSelected
                             ? 'bg-purple-600 text-white shadow-lg scale-110'
                             : hasEntry
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            ? dayStyle
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -965,74 +1066,96 @@ const HealthTrackerApp = () => {
                   })}
                 </div>
 
-                {entries[selectedDate] && (
+                {dayRecords && dayRecords.length > 0 && (
                   <div className="mt-8 bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl">
                     <h3 className="text-xl font-bold text-gray-800 mb-4">
-                      Registro del {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { 
+                      Registros del {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { 
                         weekday: 'long', 
                         year: 'numeric', 
                         month: 'long', 
                         day: 'numeric' 
                       })}
                     </h3>
-                    <div className="grid md:grid-cols-2 gap-4 mb-4">
-                      {Object.keys(categories).map((category) => 
-                        entries[selectedDate][category] && (
-                          <div key={category} className="bg-white p-4 rounded-lg">
-                            <span className="font-semibold text-gray-700">{categoryLabels[category]}:</span>
-                            <span 
-                              className={`ml-2 px-3 py-1 rounded-full text-white text-sm ${getColorForCategory(category, entries[selectedDate][category])}`}
-                              style={getColorStyle(category, entries[selectedDate][category])}
-                            >
-                              {entries[selectedDate][category]}
-                            </span>
+                    <div className="space-y-4">
+                      {[...dayRecords].sort((a, b) => a.hora.localeCompare(b.hora)).map((record) => (
+                        <div key={record.id} className="bg-white p-4 rounded-lg border-l-4 border-purple-600">
+                          <div className="flex justify-between items-start gap-4 mb-3">
+                            <div className="font-semibold text-lg text-purple-600">{record.hora}</div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => openEditModal(record)}
+                                className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors flex items-center gap-1"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => deleteRecord(record.id)}
+                                className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors flex items-center gap-1"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Eliminar
+                              </button>
+                            </div>
                           </div>
-                        )
-                      )}
-                    </div>
-
-                    {/* Checkboxes */}
-                    <div className="bg-white p-4 rounded-lg mb-4">
-                      <span className="font-semibold text-gray-700 block mb-2">Indicadores:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {entries[selectedDate].despertaresNocturnos && (
-                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                            Despertares nocturnos
-                          </span>
-                        )}
-                        {entries[selectedDate].suenosVividos && (
-                          <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
-                            Sueños vívidos
-                          </span>
-                        )}
-                        {entries[selectedDate].periodo && (
-                          <span className="px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm">
-                            Periodo
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Síntomas físicos */}
-                    {entries[selectedDate].sintomasFisicos && entries[selectedDate].sintomasFisicos.length > 0 && (
-                      <div className="bg-white p-4 rounded-lg mb-4">
-                        <span className="font-semibold text-gray-700 block mb-2">Síntomas físicos:</span>
-                        <div className="flex flex-wrap gap-2">
-                          {entries[selectedDate].sintomasFisicos.map((sintoma) => (
-                            <span key={sintoma} className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
-                              {sintoma}
-                            </span>
-                          ))}
+                          <div className="grid md:grid-cols-2 gap-2">
+                            {Object.keys(categories).map((category) => 
+                              record[category] && (
+                                <div key={category} className="text-sm">
+                                  <span className="font-semibold text-gray-700">{categoryLabels[category]}:</span>
+                                  <span 
+                                    className={`ml-2 px-2 py-1 rounded-full text-white text-xs ${getColorForCategory(category, record[category])}`}
+                                    style={getColorStyle(category, record[category])}
+                                  >
+                                    {record[category]}
+                                  </span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                          {record.comentarios && (
+                            <div className="mt-3 p-3 bg-yellow-50 rounded-lg text-sm text-gray-700">
+                              <strong>Notas:</strong> {record.comentarios}
+                            </div>
+                          )}
+                          
+                          {/* Indicadores y síntomas del registro */}
+                          <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                            <div className="flex flex-wrap gap-2">
+                              {record.despertaresNocturnos && (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                  Despertares nocturnos
+                                </span>
+                              )}
+                              {record.suenosVividos && (
+                                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                                  Sueños vívidos
+                                </span>
+                              )}
+                              {record.periodo && (
+                                <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded-full text-xs font-semibold">
+                                  Período
+                                </span>
+                              )}
+                              {record.irritabilidad && (
+                                <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
+                                  Irritabilidad
+                                </span>
+                              )}
+                            </div>
+                            {record.sintomasFisicos && record.sintomasFisicos.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {record.sintomasFisicos.map((sintoma) => (
+                                  <span key={sintoma} className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                                    {sintoma}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
-
-                    {entries[selectedDate].comentarios && (
-                      <div className="bg-white p-4 rounded-lg">
-                        <span className="font-semibold text-gray-700 block mb-2">Comentarios:</span>
-                        <p className="text-gray-600">{entries[selectedDate].comentarios}</p>
-                      </div>
-                    )}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1109,7 +1232,7 @@ const HealthTrackerApp = () => {
                           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl mb-6">
                             <p className="text-lg font-semibold text-gray-700 mb-2">
                               Total de registros: <span className="text-purple-600 text-2xl">
-                                {Object.entries(entries).filter(([date]) => date >= dateRange.start && date <= dateRange.end).length}
+                                {getTotalRecords()}
                               </span>
                             </p>
                             <p className="text-sm text-gray-600">
@@ -1153,7 +1276,7 @@ const HealthTrackerApp = () => {
                             {/* Estadísticas de checkboxes */}
                             <div className="bg-gray-50 p-6 rounded-xl">
                               <h4 className="text-lg font-bold text-gray-800 mb-4">Indicadores</h4>
-                              <div className="grid md:grid-cols-3 gap-4">
+                              <div className="grid md:grid-cols-2 gap-4">
                                 <div className="bg-white p-4 rounded-lg">
                                   <p className="text-sm text-gray-600 mb-1">Despertares nocturnos</p>
                                   <p className="text-2xl font-bold text-blue-600">{stats.despertaresNocturnos.true} días</p>
@@ -1166,6 +1289,10 @@ const HealthTrackerApp = () => {
                                   <p className="text-sm text-gray-600 mb-1">Periodo</p>
                                   <p className="text-2xl font-bold text-pink-600">{stats.periodo.true} días</p>
                                 </div>
+                                <div className="bg-white p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 mb-1">Irritabilidad</p>
+                                  <p className="text-2xl font-bold text-orange-600">{stats.irritabilidad.true} días</p>
+                                </div>
                               </div>
                             </div>
 
@@ -1175,7 +1302,7 @@ const HealthTrackerApp = () => {
                                 <h4 className="text-lg font-bold text-gray-800 mb-4">Síntomas Físicos</h4>
                                 <div className="space-y-3">
                                   {Object.entries(stats.sintomasFisicos).map(([sintoma, count]) => {
-                                    const total = Object.entries(entries).filter(([date]) => date >= dateRange.start && date <= dateRange.end).length;
+                                    const total = getTotalRecords();
                                     const percentage = total > 0 ? (count / total) * 100 : 0;
                                     return (
                                       <div key={sintoma} className="flex items-center gap-4">
@@ -1297,6 +1424,190 @@ const HealthTrackerApp = () => {
           </div>
         </div>
       </div>
+    
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slide-in">
+            <div className="sticky top-0 bg-white border-b-2 border-purple-600 p-6 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-800">
+                {editingRecord ? 'Editar registro' : 'Nuevo registro'}
+              </h2>
+              <button
+                onClick={closeEditModal}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Fecha
+                  </label>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    disabled
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Hora
+                  </label>
+                  <input
+                    type="time"
+                    value={registroHora}
+                    onChange={(e) => setRegistroHora(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {Object.keys(categories).map((category) => (
+                <div key={category} className="bg-gray-50 p-6 rounded-xl">
+                  <label className="block text-lg font-semibold text-gray-800 mb-3">
+                    {categoryLabels[category]}
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {categories[category].map((option) => {
+                      const isSelected = formData[category] === option;
+                      const colorStyle = isSelected ? getColorStyle(category, option) : {};
+                      
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => handleChange(category, option)}
+                          style={colorStyle}
+                          className={`py-3 px-4 rounded-lg font-medium transition-all transform hover:scale-105 ${
+                            isSelected
+                              ? `${getColorForCategory(category, option) || ''} text-white shadow-lg`
+                              : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-purple-400'
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Indicadores */}
+              <div className="bg-gray-50 p-6 rounded-xl">
+                <label className="block text-lg font-semibold text-gray-800 mb-3">
+                  Indicadores
+                </label>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.despertaresNocturnos}
+                      onChange={() => toggleCheckbox('despertaresNocturnos')}
+                      className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                    />
+                    <span className="text-gray-700 font-medium">Despertares nocturnos</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.suenosVividos}
+                      onChange={() => toggleCheckbox('suenosVividos')}
+                      className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                    />
+                    <span className="text-gray-700 font-medium">Sueños vívidos</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.periodo}
+                      onChange={() => toggleCheckbox('periodo')}
+                      className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                    />
+                    <span className="text-gray-700 font-medium">Período</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.irritabilidad}
+                      onChange={() => toggleCheckbox('irritabilidad')}
+                      className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                    />
+                    <span className="text-gray-700 font-medium">Irritabilidad</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Síntomas físicos */}
+              <div className="bg-gray-50 p-6 rounded-xl">
+                <label className="block text-lg font-semibold text-gray-800 mb-3">
+                  Síntomas físicos
+                </label>
+                <div className="space-y-2">
+                  {sintomasFisicosOptions.map((sintoma) => (
+                    <label
+                      key={sintoma}
+                      className="flex items-center gap-3 cursor-pointer bg-white p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(formData.sintomasFisicos || []).includes(sintoma)}
+                        onChange={() => toggleSintoma(sintoma)}
+                        className="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                      />
+                      <span className="text-gray-700 font-medium">{sintoma}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-6 rounded-xl">
+                <label className="block text-lg font-semibold text-gray-800 mb-3">
+                  Comentarios
+                </label>
+                <textarea
+                  value={formData.comentarios}
+                  onChange={(e) => handleChange('comentarios', e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                  rows="4"
+                  placeholder="Añade comentarios sobre este registro..."
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSubmit}
+                  className="flex-1 px-6 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  Guardar
+                </button>
+                <button
+                  onClick={closeEditModal}
+                  className="flex-1 px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                {editingRecord && (
+                  <button
+                    onClick={() => {
+                      deleteRecord(editingRecord.id);
+                      closeEditModal();
+                    }}
+                    className="flex-1 px-6 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    Eliminar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     
       {showCategoryModal && <CategoryModal />}
     </div>
