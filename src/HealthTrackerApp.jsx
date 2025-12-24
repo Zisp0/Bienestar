@@ -195,13 +195,6 @@ const HealthTrackerApp = () => {
     try {
       const newEntries = { ...entries };
       
-      // Convertir datos antiguos (formato objeto) a nuevo formato (array)
-      if (!newEntries[selectedDate]) {
-        newEntries[selectedDate] = [];
-      } else if (!Array.isArray(newEntries[selectedDate])) {
-        newEntries[selectedDate] = [newEntries[selectedDate]];
-      }
-      
       const recordId = editingRecord?.id || `${Date.now()}-${Math.random()}`;
       const newRecord = {
         id: recordId,
@@ -211,9 +204,42 @@ const HealthTrackerApp = () => {
       };
       
       if (editingRecord) {
-        const idx = newEntries[selectedDate].findIndex(r => r.id === editingRecord.id);
-        if (idx >= 0) newEntries[selectedDate][idx] = newRecord;
+        // Si estamos editando y la fecha cambió, necesitamos mover el registro
+        const oldDate = editingRecord.date || Object.keys(newEntries).find(date => 
+          Array.isArray(newEntries[date]) && newEntries[date].some(r => r.id === editingRecord.id)
+        );
+        
+        if (oldDate && oldDate !== selectedDate) {
+          // Eliminar del índice anterior
+          if (Array.isArray(newEntries[oldDate])) {
+            newEntries[oldDate] = newEntries[oldDate].filter(r => r.id !== editingRecord.id);
+            if (newEntries[oldDate].length === 0) {
+              delete newEntries[oldDate];
+            }
+          }
+        }
+        
+        // Preparar la nueva fecha (usar oldDate si no cambió)
+        const targetDate = selectedDate;
+        if (!newEntries[targetDate]) {
+          newEntries[targetDate] = [];
+        } else if (!Array.isArray(newEntries[targetDate])) {
+          newEntries[targetDate] = [newEntries[targetDate]];
+        }
+        
+        const idx = newEntries[targetDate].findIndex(r => r.id === editingRecord.id);
+        if (idx >= 0) {
+          newEntries[targetDate][idx] = newRecord;
+        } else {
+          newEntries[targetDate].push(newRecord);
+        }
       } else {
+        // Nuevo registro
+        if (!newEntries[selectedDate]) {
+          newEntries[selectedDate] = [];
+        } else if (!Array.isArray(newEntries[selectedDate])) {
+          newEntries[selectedDate] = [newEntries[selectedDate]];
+        }
         newEntries[selectedDate].push(newRecord);
       }
       
@@ -282,13 +308,14 @@ const HealthTrackerApp = () => {
     }
   }, [selectedDate, entries]);
 
-  const openEditModal = (record) => {
-    setEditingRecord(record);
+  const openEditModal = (record, recordDate) => {
+    setEditingRecord({ ...record, date: recordDate });
     setFormData({
       ...record,
       sintomasFisicos: record.sintomasFisicos || []
     });
     setRegistroHora(record.hora);
+    setSelectedDate(recordDate);
     setShowEditModal(true);
   };
 
@@ -1083,7 +1110,7 @@ const HealthTrackerApp = () => {
                             <div className="font-semibold text-lg text-purple-600">{record.hora}</div>
                             <div className="flex gap-2">
                               <button
-                                onClick={() => openEditModal(record)}
+                                onClick={() => openEditModal(record, selectedDate)}
                                 className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors flex items-center gap-1"
                               >
                                 <Edit2 className="w-4 h-4" />
@@ -1451,7 +1478,6 @@ const HealthTrackerApp = () => {
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    disabled
                   />
                 </div>
                 <div className="flex-1">
